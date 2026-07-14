@@ -1,128 +1,180 @@
-interface MetricasScreenProps {
-  tasaPostura: number;
-  totalAvesActivas: number;
-  ventasMes: number;
-  promedioVenta: number;
-  alimentoHoy: number;
-  rankingHuevos: { categoria: string; cantidad: number }[];
-  cargarDatos: () => void;
+import { useState } from 'react';
+import { supabase } from '../supabaseClient';
+
+interface ProduccionScreenProps {
+  onSuccess: () => void;
 }
 
-export default function MetricasScreen({
-  tasaPostura,
-  totalAvesActivas,
-  ventasMes,
-  promedioVenta,
-  alimentoHoy,
-  rankingHuevos,
-  cargarDatos,
-}: MetricasScreenProps) {
+export default function ProduccionScreen({ onSuccess }: ProduccionScreenProps) {
+  const [fechaProduccion, setFechaProduccion] = useState(new Date().toISOString().split('T')[0]);
+  const [cantSuper, setCantSuper] = useState<string>('0');
+  const [cantExtra, setCantExtra] = useState<string>('0');
+  const [cantPrimera, setCantPrimera] = useState<string>('0');
+  const [cantSegunda, setCantSegunda] = useState<string>('0');
+  const [cantMerma, setCantMerma] = useState<string>('0');
+  const [alimentoKg, setAlimentoKg] = useState<string>('0');
+  const [obsProduccion, setObsProduccion] = useState('');
+
+  const s = parseInt(cantSuper) || 0;
+  const e = parseInt(cantExtra) || 0;
+  const p = parseInt(cantPrimera) || 0;
+  const seg = parseInt(cantSegunda) || 0;
+  const m = parseInt(cantMerma) || 0;
   
-  // Gramos consumidos por ave (Fórmula técnica estándar)
-  const gramosPorAve = totalAvesActivas > 0 ? Math.round((alimentoHoy * 1000) / totalAvesActivas) : 0;
+  const totalHuevosComerciales = Math.max(0, (s + e + p + seg) - m);
+
+  const handleGuardarProduccion = async () => {
+    if (s === 0 && e === 0 && p === 0 && seg === 0 && m === 0 && parseFloat(alimentoKg) <= 0) {
+      alert("Debes registrar cantidades de huevos o consumo de alimento.");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('produccion').insert([
+        {
+          fecha: fechaProduccion,
+          total_huevos_recolectados: totalHuevosComerciales,
+          super: s,
+          extra: e,
+          primera: p,
+          segunda: seg,
+          merma: m,
+          alimento_kg: parseFloat(alimentoKg) || 0,
+          observaciones: obsProduccion.trim(),
+        },
+      ]);
+
+      if (error) throw error;
+
+      alert(`¡Recolección guardada con éxito! Neto de esta tanda: ${totalHuevosComerciales} huevos.`);
+      setCantSuper('0');
+      setCantExtra('0');
+      setCantPrimera('0');
+      setCantSegunda('0');
+      setCantMerma('0');
+      setAlimentoKg('0');
+      setObsProduccion('');
+      onSuccess();
+    } catch (err: any) {
+      alert(`Falla de Guardado: ${err.message}`);
+    }
+  };
 
   return (
-    <section className="space-y-6">
-      {/* Encabezado */}
-      <div className="flex justify-between items-end">
-        <div>
-          <p className="text-[12px] text-[#444651] uppercase tracking-wider font-semibold">Dashboard de Operaciones</p>
-          <h2 className="text-[24px] font-bold text-[#191c1d]">Métricas en Tiempo Real</h2>
-        </div>
-        <button
-          onClick={cargarDatos}
-          className="w-12 h-12 flex items-center justify-center bg-[#e7e8e9] rounded-lg active:scale-95 transition-transform"
-        >
-          <span className="material-symbols-outlined text-[#444651]">refresh</span>
-        </button>
+    <section className="space-y-4">
+      <div>
+        <p className="text-[12px] text-[#444651] uppercase tracking-wider font-semibold">Ingreso de Recolección</p>
+        <h2 className="text-[24px] font-bold text-[#191c1d]">Producción Diaria</h2>
+        <p className="text-xs text-gray-500">Registra el control de producción y alimento.</p>
       </div>
 
-      {/* BLOQUE 1: OPERACIONES VIVAS */}
-      <div className="grid grid-cols-2 gap-4">
-        {/* Tarjeta Plantel */}
-        <div className="bg-white border border-[#c5c5d3] rounded-xl p-4 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-1 h-full bg-[#00236f]"></div>
-          <span className="text-xs font-semibold text-gray-500 block mb-1">Plantel Vivo</span>
-          <span className="text-[28px] font-bold text-[#00236f]">{totalAvesActivas.toLocaleString('es-CL')}</span>
-          <p className="text-[11px] text-gray-400 mt-1">Aves activas en galpón</p>
-        </div>
-
-        {/* Tarjeta Tasa Postura */}
-        <div className="bg-white border border-[#c5c5d3] rounded-xl p-4 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-1 h-full bg-[#006c49]"></div>
-          <span className="text-xs font-semibold text-gray-500 block mb-1">Tasa de Postura</span>
-          <span className="text-[28px] font-bold text-[#006c49]">{tasaPostura}%</span>
-          <div className="mt-2 h-1 w-full bg-gray-100 rounded-full">
-            <div className="h-full bg-[#006c49] rounded-full" style={{ width: `${tasaPostura}%` }}></div>
-          </div>
-        </div>
-      </div>
-
-      {/* BLOQUE 2: COMERCIAL */}
       <div className="bg-white border border-[#c5c5d3] rounded-xl p-4 shadow-sm space-y-4">
-        <h3 className="text-sm font-bold text-[#444651] uppercase tracking-wider border-b pb-2 flex items-center gap-2">
-          <span className="material-symbols-outlined text-xs">payments</span> Resumen de Ingresos
-        </h3>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <span className="text-xs text-gray-400 block">Ventas del Mes</span>
-            <span className="text-xl font-bold text-gray-800">${ventasMes.toLocaleString('es-CL')}</span>
+        <div>
+          <label className="block text-sm font-semibold mb-1 text-[#444651]">Fecha de Recolección</label>
+          <input
+            type="date"
+            className="w-full border border-gray-300 rounded-lg p-2.5"
+            value={fechaProduccion}
+            onChange={(e) => setFechaProduccion(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-3 pt-2 border-t">
+          <h3 className="text-xs font-bold text-gray-400 uppercase">Cantidad por Categoría (Unidades)</h3>
+
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-sm font-semibold text-[#444651] w-24">Súper:</span>
+            <input
+              type="text" pattern="[0-9]*"
+              className="border border-gray-300 rounded-lg p-2 text-center w-24 font-bold"
+              value={cantSuper}
+              onChange={(e) => setCantSuper(e.target.value.replace(/[^0-9]/g, ''))}
+            />
           </div>
-          <div>
-            <span className="text-xs text-gray-400 block">Ticket Promedio</span>
-            <span className="text-xl font-bold text-[#00236f]">${promedioVenta.toLocaleString('es-CL')}</span>
+
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-sm font-semibold text-[#444651] w-24">Extra:</span>
+            <input
+              type="text" pattern="[0-9]*"
+              className="border border-gray-300 rounded-lg p-2 text-center w-24 font-bold"
+              value={cantExtra}
+              onChange={(e) => setCantExtra(e.target.value.replace(/[^0-9]/g, ''))}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-sm font-semibold text-[#444651] w-24">Primera:</span>
+            <input
+              type="text" pattern="[0-9]*"
+              className="border border-gray-300 rounded-lg p-2 text-center w-24 font-bold"
+              value={cantPrimera}
+              onChange={(e) => setCantPrimera(e.target.value.replace(/[^0-9]/g, ''))}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-sm font-semibold text-[#444651] w-24">Segunda:</span>
+            <input
+              type="text" pattern="[0-9]*"
+              className="border border-gray-300 rounded-lg p-2 text-center w-24 font-bold"
+              value={cantSegunda}
+              onChange={(e) => setCantSegunda(e.target.value.replace(/[^0-9]/g, ''))}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-4 text-red-600">
+            <span className="text-sm font-semibold w-24">Merma / Rotas:</span>
+            <input
+              type="text" pattern="[0-9]*"
+              className="border border-red-300 rounded-lg p-2 text-center w-24 font-bold text-red-600 bg-red-50"
+              value={cantMerma}
+              onChange={(e) => setCantMerma(e.target.value.replace(/[^0-9]/g, ''))}
+            />
           </div>
         </div>
-      </div>
 
-      {/* BLOQUE 3: CONSUMOS DIARIOS */}
-      <div className="bg-white border border-[#c5c5d3] rounded-xl p-4 shadow-sm space-y-3">
-        <h3 className="text-sm font-bold text-[#444651] uppercase tracking-wider border-b pb-1 flex items-center gap-2">
-          <span className="material-symbols-outlined text-xs">nutrition</span> Alimentación
-        </h3>
-        <div className="flex justify-between items-center">
+        <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex justify-between items-center text-emerald-900">
+          <span className="text-sm font-semibold">Total Comercializable (Neto):</span>
+          <span className="text-xl font-bold">{totalHuevosComerciales} huevos</span>
+        </div>
+
+        <div className="pt-2 border-t space-y-2">
+          <h3 className="text-xs font-bold text-gray-400 uppercase">Insumos del Gallinero</h3>
           <div>
-            <span className="text-xs text-gray-400 block">Ración Diaria Total</span>
-            <span className="text-xl font-bold text-gray-800">{alimentoHoy} Kg</span>
-          </div>
-          <div className="text-right">
-            <span className="text-xs text-gray-400 block">Consumo Promedio</span>
-            <span className={`text-lg font-bold ${gramosPorAve > 125 || gramosPorAve < 110 ? 'text-amber-600' : 'text-emerald-700'}`}>
-              {gramosPorAve}g <span className="text-xs font-normal text-gray-500">/ ave</span>
-            </span>
+            <label className="block text-sm font-semibold mb-1 text-[#444651]">Alimento Consumido (Kg)</label>
+            <input
+              type="text"
+              className="w-full border border-gray-300 rounded-lg p-2.5 font-semibold text-center text-lg"
+              placeholder="0.0"
+              value={alimentoKg}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '' || /^[0-9]*\.?[0-9]*$/.test(val)) {
+                  setAlimentoKg(val);
+                }
+              }}
+            />
           </div>
         </div>
-      </div>
 
-      {/* BLOQUE 4: RANKING */}
-      <div className="bg-white border border-[#c5c5d3] rounded-xl p-4 shadow-sm space-y-3">
-        <h3 className="text-sm font-bold text-[#444651] uppercase tracking-wider border-b pb-1">
-          Ranking de Movimiento de Huevos (Formatos en Mes)
-        </h3>
-        {rankingHuevos.length > 0 ? (
-          <div className="space-y-2.5 pt-1">
-            {rankingHuevos.map((item, index) => {
-              const maxCantidad = rankingHuevos[0]?.cantidad || 1;
-              const porcentajeBarra = Math.round((item.cantidad / maxCantidad) * 100);
-              return (
-                <div key={item.categoria} className="space-y-1">
-                  <div className="flex justify-between text-xs font-medium text-gray-700">
-                    <span>{index + 1}. Huevo {item.categoria}</span>
-                    <span className="font-bold text-gray-900">{item.cantidad} fts.</span>
-                  </div>
-                  <div className="h-2.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-[#00236f] rounded-full transition-all duration-500" 
-                      style={{ width: `${porcentajeBarra}%` }}
-                    ></div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-xs text-gray-400 italic text-center py-2">No registras ventas ingresadas este mes aún.</p>
-        )}
+        <div>
+          <label className="block text-sm font-semibold mb-1 text-[#444651]">Observaciones Especiales</label>
+          <textarea
+            className="w-full border border-gray-300 rounded-lg p-2 text-sm"
+            rows={2}
+            placeholder="Alguna novedad adicional..."
+            value={obsProduccion}
+            onChange={(e) => setObsProduccion(e.target.value)}
+          />
+        </div>
+
+        <button
+          onClick={handleGuardarProduccion}
+          className="w-full h-12 bg-[#006c49] text-white font-bold rounded-lg flex items-center justify-center gap-2 active:scale-95 transition-transform"
+        >
+          <span className="material-symbols-outlined">save</span>
+          Guardar Registro Diario
+        </button>
       </div>
     </section>
   );
