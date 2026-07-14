@@ -26,7 +26,6 @@ export default function App() {
   const [promedioVenta, setPromedioVenta] = useState<number>(0);
   const [alimentoHoy, setAlimentoHoy] = useState<number>(0);
   const [rankingHuevos, setRankingHuevos] = useState<{ categoria: string; cantidad: number }[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // Formatos de respaldo automáticos por si la tabla de precios del servidor está vacía
   const formatosRespaldo = [
@@ -42,7 +41,6 @@ export default function App() {
   // Función asíncrona central encargada de procesar las métricas mediante consultas SQL a Supabase
   const cargarTodoElSistema = async () => {
     try {
-      setLoading(true);
       const hoy = new Date().toISOString().split('T')[0];
       const inicioMes = new Date();
       inicioMes.setDate(1);
@@ -74,7 +72,7 @@ export default function App() {
           } else if (m.movimiento === 'Venta' || m.movimiento === 'Muerto') {
             conteoAves -= cant;
           } else if (m.movimiento === 'Ajuste') {
-            const detalleTexto = m.text || m.detalle ? String(m.detalle).toLowerCase() : '';
+            const detalleTexto = m.detalle ? String(m.detalle).toLowerCase() : '';
             // Verificación estricta de sentido del ajuste para restar bajas o forzar el descuente de 70
             if (
               detalleTexto.includes('baja') || 
@@ -146,14 +144,13 @@ export default function App() {
 
     } catch (err) {
       console.error("Error procesando analíticas globales del sistema:", err);
-    } finally {
-      setLoading(false);
     }
   };
 
   // Escucha activa para refrescar los datos cada vez que el despachador navega por la app
   useEffect(() => {
     cargarTodoElSistema();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   return (
@@ -177,7 +174,6 @@ export default function App() {
         {activeTab === 'plantel' && (
           <PlantelScreen
             totalAvesActivas={totalAvesActivas.toString()}
-            setTotalAvesActivas={() => {}} // Bloqueado de solo lectura: el inventario depende puramente de las transacciones
             cargarDatos={cargarTodoElSistema}
           />
         )}
