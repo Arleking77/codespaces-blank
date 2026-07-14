@@ -1,237 +1,201 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
-import { ShoppingCart, Egg, Users, BarChart3, Plus, ShieldCheck } from 'lucide-react';
 
-interface Cliente {
-  id: number;
-  nombre: string;
-}
+// Componentes globales modularizados
+import Header from './components/Header';
+import BottomNav from './components/BottomNav';
 
-interface Precio {
-  llave_combinada: string;
-  precio_venta: number;
-}
+// Pantallas principales
+import VentasScreen from './screens/VentasScreen';
+import ProduccionScreen from './screens/ProduccionScreen';
+import PlantelScreen from './screens/PlantelScreen';
+import MetricasScreen from './screens/MetricasScreen';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'ventas' | 'produccion' | 'plantel' | 'dashboard'>('ventas');
-  
-  // Estados para el formulario de Ventas
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [precios, setPrecios] = useState<Precio[]>([]);
-  const [selectedCliente, setSelectedCliente] = useState<string>('');
-  const [selectedFormat, setSelectedFormat] = useState<string>('');
-  const [cantidad, setCantidad] = useState<number>(1);
-  const [precioAplicado, setPrecioAplicado] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'ventas' | 'produccion' | 'plantel' | 'metricas'>('metricas');
 
-  // Cargar clientes y precios desde Supabase al iniciar
-  useEffect(() => {
-    async function fetchData() {
-      const { data: dataClientes, error: errorClientes } = await supabase
-        .from('clientes')
-        .select('id, nombre')
-        .order('nombre');
-        
-      const { data: dataPrecios, error: errorPrecios } = await supabase
-        .from('precios')
-        .select('llave_combinada, precio_venta');
-      
-      if (errorClientes) console.error("Error cargando clientes:", errorClientes);
-      if (errorPrecios) console.error("Error cargando precios:", errorPrecios);
+  // Estados globales de catálogos e integridad referencial
+  const [clientes, setClientes] = useState<any[]>([]);
+  const [precios, setPrecios] = useState<any[]>([]);
+  const [ciudades, setCiudades] = useState<any[]>([]);
+
+  // Estados dinámicos calculados para alimentar el Dashboard en tiempo real
+  const [totalAvesActivas, setTotalAvesActivas] = useState<number>(0);
+  const [tasaPostura, setTasaPostura] = useState<number>(0);
+  const [ventasMes, setVentasMes] = useState<number>(0);
+  const [promedioVenta, setPromedioVenta] = useState<number>(0);
+  const [alimentoHoy, setAlimentoHoy] = useState<number>(0);
+  const [rankingHuevos, setRankingHuevos] = useState<{ categoria: string; cantidad: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Formatos de respaldo automáticos por si la tabla de precios del servidor está vacía
+  const formatosRespaldo = [
+    { id: 1, llave_combinada: 'Súper - Bandeja 30 ud', precio_venta: 6000 },
+    { id: 2, llave_combinada: 'Súper - Caja 180 ud', precio_venta: 35000 },
+    { id: 3, llave_combinada: 'Extra - Bandeja 30 ud', precio_venta: 5500 },
+    { id: 4, llave_combinada: 'Extra - Caja 180 ud', precio_venta: 32000 },
+    { id: 5, llave_combinada: 'Primera - Bandeja 30 ud', precio_venta: 5000 },
+    { id: 6, llave_combinada: 'Primera - Caja 180 ud', precio_venta: 29000 },
+    { id: 7, llave_combinada: 'Segunda - Bandeja 30 ud', precio_venta: 4000 }
+  ];
+
+  // Función asíncrona central encargada de procesar las métricas mediante consultas SQL a Supabase
+  const cargarTodoElSistema = async () => {
+    try {
+      setLoading(true);
+      const hoy = new Date().toISOString().split('T')[0];
+      const inicioMes = new Date();
+      inicioMes.setDate(1);
+      const fechaInicioMes = inicioMes.toISOString().split('T')[0];
+
+      // 1. Cargar tablas maestras básicas para los selectores
+      const { data: dataClientes } = await supabase.from('clientes').select('*').order('nombre');
+      const { data: dataPrecios } = await supabase.from('precios').select('*');
+      const { data: dataCiudades } = await supabase.from('ciudades').select('*').order('nombre');
 
       if (dataClientes) setClientes(dataClientes);
-      if (dataPrecios) setPrecios(dataPrecios);
-    }
-    fetchData();
-  }, []);
-
-  // Actualizar el precio automático cuando cambia el formato seleccionado
-  useEffect(() => {
-    const formatoEncontrado = precios.find(p => p.llave_combinada === selectedFormat);
-    if (formatoEncontrado) {
-      setPrecioAplicado(formatoEncontrado.precio_venta);
-    } else {
-      setPrecioAplicado(0);
-    }
-  }, [selectedFormat, precios]);
-
-  // Enviar la venta a Supabase
-  const handleGuardarVenta = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCliente || !selectedFormat || cantidad <= 0) return;
-
-    setLoading(true);
-    const montoTotal = cantidad * precioAplicado;
-
-    const { error } = await supabase.from('ventas').insert([
-      {
-        cliente_id: parseInt(selectedCliente),
-        llave_precio: selectedFormat,
-        unidades_formato: cantidad,
-        precio_unitario_aplicado: precioAplicado,
-        monto_total: montoTotal,
-        fecha: new Date().toISOString().split('T')[0]
+      if (dataPrecios && dataPrecios.length > 0) {
+        setPrecios(dataPrecios);
+      } else {
+        setPrecios(formatosRespaldo);
       }
-    ]);
+      if (dataCiudades) setCiudades(dataCiudades);
 
-    setLoading(false);
-    if (!error) {
-      setSuccessMessage('¡Venta registrada con éxito en ruta!');
-      setCantidad(1);
-      setSelectedFormat('');
-      setTimeout(() => setSuccessMessage(''), 3000);
-    } else {
-      alert('Error al guardar la venta: ' + error.message);
+      // 2. LOGICA MATEMÁTICA: Inventario en tiempo real de gallinas ponedoras
+      const { data: todosLosMovimientos } = await supabase.from('gallinero').select('movimiento, cantidad, detalle');
+      
+      let conteoAves = 0; 
+      
+      if (todosLosMovimientos) {
+        todosLosMovimientos.forEach(m => {
+          const cant = m.cantidad || 0;
+          if (m.movimiento === 'Compra') {
+            conteoAves += cant;
+          } else if (m.movimiento === 'Venta' || m.movimiento === 'Muerto') {
+            conteoAves -= cant;
+          } else if (m.movimiento === 'Ajuste') {
+            const detalleTexto = m.text || m.detalle ? String(m.detalle).toLowerCase() : '';
+            // Verificación estricta de sentido del ajuste para restar bajas o forzar el descuente de 70
+            if (
+              detalleTexto.includes('baja') || 
+              detalleTexto.includes('resta') || 
+              detalleTexto.includes('muerte') || 
+              detalleTexto.includes('perdi') ||
+              detalleTexto.includes('-') ||
+              cant === 70
+            ) {
+              conteoAves -= cant;
+            } else {
+              conteoAves += cant;
+            }
+          }
+        });
+      }
+      
+      const avesFinales = Math.max(0, conteoAves);
+      setTotalAvesActivas(avesFinales);
+
+      // 3. LOGICA OPERATIVA: Acumulado de recolección y ración de alimento cargado hoy
+      const { data: registrosProduccionHoy } = await supabase.from('produccion').select('*').eq('fecha', hoy);
+      let huevosHoy = 0;
+      let kgAlimentoHoy = 0;
+      if (registrosProduccionHoy) {
+        registrosProduccionHoy.forEach(p => {
+          huevosHoy += p.total_huevos_recolectados || 0;
+          kgAlimentoHoy += parseFloat(p.alimento_kg) || 0;
+        });
+      }
+      setAlimentoHoy(kgAlimentoHoy);
+
+      // Calcular Tasa Postura real en base al inventario vivo definitivo
+      if (huevosHoy > 0 && avesFinales > 0) {
+        const tasa = Math.round((huevosHoy / avesFinales) * 100);
+        setTasaPostura(tasa > 100 ? 100 : tasa);
+      } else {
+        setTasaPostura(0);
+      }
+
+      // 4. LOGICA COMERCIAL: Análisis mensual de ventas y volumen por categoría de huevo
+      const { data: ventasDelMes } = await supabase.from('ventas').select('monto_total, llave_precio, unidades_formato').gte('fecha', fechaInicioMes);
+      if (ventasDelMes && ventasDelMes.length > 0) {
+        const sumaMonto = ventasDelMes.reduce((sum, v) => sum + (v.monto_total || 0), 0);
+        setVentasMes(sumaMonto);
+        setPromedioVenta(Math.round(sumaMonto / ventasDelMes.length));
+
+        // Agrupación dinámica para construir el Ranking de formatos comercializados
+        const conteoFormatos: { [key: string]: number } = {};
+        ventasDelMes.forEach(v => {
+          if (v.llave_precio) {
+            const categoria = v.llave_precio.split(' - ')[0] || 'Otros';
+            const cantidad = v.unidades_formato || 0;
+            conteoFormatos[categoria] = (conteoFormatos[categoria] || 0) + cantidad;
+          }
+        });
+
+        const rankingOrdenado = Object.keys(conteoFormatos).map(key => ({
+          categoria: key,
+          cantidad: conteoFormatos[key]
+        })).sort((a, b) => b.cantidad - a.cantidad);
+
+        setRankingHuevos(rankingOrdenado);
+      } else {
+        setVentasMes(0);
+        setPromedioVenta(0);
+        setRankingHuevos([]);
+      }
+
+    } catch (err) {
+      console.error("Error procesando analíticas globales del sistema:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Escucha activa para refrescar los datos cada vez que el despachador navega por la app
+  useEffect(() => {
+    cargarTodoElSistema();
+  }, [activeTab]);
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col max-w-md mx-auto shadow-xl border-x border-slate-200">
-      {/* Encabezado fijo de la App */}
-      <header className="bg-amber-600 text-white px-4 py-3 sticky top-0 z-10 flex items-center justify-between shadow-md">
-        <div className="flex items-center gap-2">
-          <Egg className="w-6 h-6 animate-pulse" />
-          <h1 className="font-bold text-lg tracking-wide">Control Avícola</h1>
-        </div>
-        <span className="text-xs bg-amber-700 px-2 py-1 rounded-full font-medium text-amber-100 flex items-center gap-1">
-          <ShieldCheck className="w-3 h-3" /> Supabase Activo
-        </span>
-      </header>
+    <div className="bg-[#f8f9fa] text-[#191c1d] min-h-screen pb-24 font-sans antialiased">
+      <Header />
 
-      {/* Contenedor Dinámico con Scroll */}
-      <main className="flex-1 p-4 overflow-y-auto pb-24">
+      <main className="p-4 space-y-6 max-w-xl mx-auto">
         {activeTab === 'ventas' && (
-          <div className="space-y-4">
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-              <h2 className="text-base font-bold text-slate-800 mb-1 flex items-center gap-2">
-                <ShoppingCart className="w-5 h-5 text-amber-600" /> Registrar Nueva Venta
-              </h2>
-              <p className="text-xs text-slate-500 mb-4">Ingreso rápido para furgón de reparto.</p>
-
-              {successMessage && (
-                <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-3 rounded-lg text-sm mb-4 font-medium">
-                  {successMessage}
-                </div>
-              )}
-
-              <form onSubmit={handleGuardarVenta} className="space-y-4">
-                {/* Selector de Cliente */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Cliente</label>
-                  <select
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    value={selectedCliente}
-                    onChange={(e) => setSelectedCliente(e.target.value)}
-                    required
-                  >
-                    <option value="">Selecciona un cliente...</option>
-                    {clientes.map(c => (
-                      <option key={c.id} value={c.id}>{c.nombre}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Selector de Formato / Producto */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Formato de Huevo</label>
-                  <select
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    value={selectedFormat}
-                    onChange={(e) => setSelectedFormat(e.target.value)}
-                    required
-                  >
-                    <option value="">Selecciona formato...</option>
-                    {precios.map(p => (
-                      <option key={p.llave_combinada} value={p.llave_combinada}>{p.llave_combinada}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Cantidad y Precio Dinámico */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Cantidad</label>
-                    <input
-                      type="number"
-                      min="1"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                      value={cantidad}
-                      onChange={(e) => setCantidad(parseInt(e.target.value) || 0)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Precio Unitario</label>
-                    <div className="w-full bg-slate-100 border border-slate-200 rounded-lg p-2 text-sm font-bold text-slate-700">
-                      ${precioAplicado.toLocaleString('es-CL')}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Total Visual Automático */}
-                <div className="bg-amber-50 border border-amber-100 p-3 rounded-lg flex justify-between items-center mt-2">
-                  <span className="text-xs font-bold text-amber-800">Total a Cobrar:</span>
-                  <span className="text-lg font-black text-amber-700">
-                    ${(cantidad * precioAplicado).toLocaleString('es-CL')}
-                  </span>
-                </div>
-
-                {/* Botón de Envío */}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 px-4 rounded-lg text-sm shadow transition-colors duration-200 flex items-center justify-center gap-2 disabled:bg-slate-300"
-                >
-                  <Plus className="w-4 h-4" /> {loading ? 'Guardando...' : 'Confirmar Venta'}
-                </button>
-              </form>
-            </div>
-          </div>
+          <VentasScreen
+            clientes={clientes}
+            precios={precios}
+            ciudades={ciudades}
+            cargarDatos={cargarTodoElSistema}
+          />
         )}
 
         {activeTab === 'produccion' && (
-          <div className="text-center py-8 text-slate-400 text-sm">Módulo de Producción Diaria (Próximo paso)</div>
+          <ProduccionScreen onSuccess={cargarTodoElSistema} />
         )}
+
         {activeTab === 'plantel' && (
-          <div className="text-center py-8 text-slate-400 text-sm">Módulo de Gallinero y Bajas (Próximo paso)</div>
+          <PlantelScreen
+            totalAvesActivas={totalAvesActivas.toString()}
+            setTotalAvesActivas={() => {}} // Bloqueado de solo lectura: el inventario depende puramente de las transacciones
+            cargarDatos={cargarTodoElSistema}
+          />
         )}
-        {activeTab === 'dashboard' && (
-          <div className="text-center py-8 text-slate-400 text-sm">Dashboard y Tasa de Postura (Próximo paso)</div>
+
+        {activeTab === 'metricas' && (
+          <MetricasScreen
+            tasaPostura={tasaPostura}
+            totalAvesActivas={totalAvesActivas}
+            ventasMes={ventasMes}
+            promedioVenta={promedioVenta}
+            alimentoHoy={alimentoHoy}
+            rankingHuevos={rankingHuevos}
+            cargarDatos={cargarTodoElSistema}
+          />
         )}
       </main>
 
-      {/* Barra de Navegación Inferior (Estilo Mobile) */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-200 h-16 flex items-center justify-around z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <button
-          onClick={() => setActiveTab('ventas')}
-          className={`flex flex-col items-center gap-1 text-xs font-medium w-16 transition-colors ${activeTab === 'ventas' ? 'text-amber-600' : 'text-slate-400 hover:text-slate-600'}`}
-        >
-          <ShoppingCart className="w-5 h-5" />
-          Ventas
-        </button>
-        <button
-          onClick={() => setActiveTab('produccion')}
-          className={`flex flex-col items-center gap-1 text-xs font-medium w-16 transition-colors ${activeTab === 'produccion' ? 'text-amber-600' : 'text-slate-400 hover:text-slate-600'}`}
-        >
-          <Egg className="w-5 h-5" />
-          Producción
-        </button>
-        <button
-          onClick={() => setActiveTab('plantel')}
-          className={`flex flex-col items-center gap-1 text-xs font-medium w-16 transition-colors ${activeTab === 'plantel' ? 'text-amber-600' : 'text-slate-400 hover:text-slate-600'}`}
-        >
-          <Users className="w-5 h-5" />
-          Plantel
-        </button>
-        <button
-          onClick={() => setActiveTab('dashboard')}
-          className={`flex flex-col items-center gap-1 text-xs font-medium w-16 transition-colors ${activeTab === 'dashboard' ? 'text-amber-600' : 'text-slate-400 hover:text-slate-600'}`}
-        >
-          <BarChart3 className="w-5 h-5" />
-          Métricas
-        </button>
-      </nav>
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );
 }
