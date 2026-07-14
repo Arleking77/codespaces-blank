@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface MetricasScreenProps {
   tasaPostura: number;
   totalAvesActivas: number;
@@ -39,7 +37,7 @@ export default function MetricasScreen({
         </button>
       </div>
 
-      {/* BLOQUE 1: OPERACIONES VIVAS (Plantel y Postura) */}
+      {/* BLOQUE 1: OPERACIONES VIVAS */}
       <div className="grid grid-cols-2 gap-4">
         {/* Tarjeta Plantel */}
         <div className="bg-white border border-[#c5c5d3] rounded-xl p-4 shadow-sm relative overflow-hidden">
@@ -60,7 +58,7 @@ export default function MetricasScreen({
         </div>
       </div>
 
-      {/* BLOQUE 2: COMERCIAL (Ventas y Pedidos) */}
+      {/* BLOQUE 2: COMERCIAL */}
       <div className="bg-white border border-[#c5c5d3] rounded-xl p-4 shadow-sm space-y-4">
         <h3 className="text-sm font-bold text-[#444651] uppercase tracking-wider border-b pb-2 flex items-center gap-2">
           <span className="material-symbols-outlined text-xs">payments</span> Resumen de Ingresos
@@ -96,7 +94,7 @@ export default function MetricasScreen({
         </div>
       </div>
 
-      {/* BLOQUE 4: RANKING DE VOLUMEN DE HUEVOS MÁS VENDIDOS */}
+      {/* BLOQUE 4: RANKING */}
       <div className="bg-white border border-[#c5c5d3] rounded-xl p-4 shadow-sm space-y-3">
         <h3 className="text-sm font-bold text-[#444651] uppercase tracking-wider border-b pb-1">
           Ranking de Movimiento de Huevos (Formatos en Mes)

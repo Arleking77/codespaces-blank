@@ -1,13 +1,12 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { supabase } from '../supabaseClient';
 
 interface PlantelScreenProps {
   totalAvesActivas: string;
-  setTotalAvesActivas: (val: string) => void;
   cargarDatos: () => void;
 }
 
-export default function PlantelScreen({ totalAvesActivas, setTotalAvesActivas, cargarDatos }: PlantelScreenProps) {
+export default function PlantelScreen({ totalAvesActivas, cargarDatos }: PlantelScreenProps) {
   const [fechaMovimiento, setFechaMovimiento] = useState(new Date().toISOString().split('T')[0]);
   const [tipoMovimiento, setTipoMovimiento] = useState<'Compra' | 'Venta' | 'Muerto' | 'Ajuste'>('Muerto');
   const [subTipoAjuste, setSubTipoAjuste] = useState<'suma' | 'resta'>('resta'); // Para controlar la dirección del ajuste
