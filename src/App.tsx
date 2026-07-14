@@ -147,7 +147,7 @@ export default function App() {
     }
   };
 
-  // Escucha activa para refrescar los datos cada vez que el despachador navega por la app
+  // Escucha activa para refrescar los datos cada vez que se navega por la app
   useEffect(() => {
     cargarTodoElSistema();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -168,7 +168,9 @@ export default function App() {
         )}
 
         {activeTab === 'produccion' && (
-          <ProduccionScreen onSuccess={cargarTodoElSistema} />
+          <ProduccionScreen 
+            onSuccess={cargarTodoElSistema} 
+          />
         )}
 
         {activeTab === 'plantel' && (
