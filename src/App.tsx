@@ -5,7 +5,7 @@ import { supabase } from './supabaseClient';
 import Header from './components/Header';
 import BottomNav from './components/BottomNav';
 
-// Pantallas principales (Castadas como any para evitar bloqueos estrictos de tipos en Vercel)
+// Pantallas principales (Casteadas como any para evitar bloqueos estrictos de tipos en Vercel)
 import VentasScreenImport from './screens/VentasScreen';
 import ProduccionScreenImport from './screens/ProduccionScreen';
 import PlantelScreenImport from './screens/PlantelScreen';
@@ -70,7 +70,7 @@ export default function App() {
       let conteoAves = 0; 
       
       if (todosLosMovimientos) {
-        todosLosMovimientos.forEach(m => {
+        todosLosMovimientos.forEach((m: any) => {
           const cant = m.cantidad || 0;
           if (m.movimiento === 'Compra') {
             conteoAves += cant;
@@ -103,7 +103,7 @@ export default function App() {
       let huevosHoy = 0;
       let kgAlimentoHoy = 0;
       if (registrosProduccionHoy) {
-        registrosProduccionHoy.forEach(p => {
+        registrosProduccionHoy.forEach((p: any) => {
           huevosHoy += p.total_huevos_recolectados || 0;
           kgAlimentoHoy += parseFloat(p.alimento_kg) || 0;
         });
@@ -121,13 +121,13 @@ export default function App() {
       // 4. LOGICA COMERCIAL: Análisis mensual de ventas y volumen por categoría de huevo
       const { data: ventasDelMes } = await supabase.from('ventas').select('monto_total, llave_precio, unidades_formato').gte('fecha', fechaInicioMes);
       if (ventasDelMes && ventasDelMes.length > 0) {
-        const sumaMonto = ventasDelMes.reduce((sum, v) => sum + (v.monto_total || 0), 0);
+        const sumaMonto = ventasDelMes.reduce((sum: any, v: any) => sum + (v.monto_total || 0), 0);
         setVentasMes(sumaMonto);
         setPromedioVenta(Math.round(sumaMonto / ventasDelMes.length));
 
         // Agrupación dinámica para construir el Ranking de formatos comercializados
         const conteoFormatos: { [key: string]: number } = {};
-        ventasDelMes.forEach(v => {
+        ventasDelMes.forEach((v: any) => {
           if (v.llave_precio) {
             const categoria = v.llave_precio.split(' - ')[0] || 'Otros';
             const cantidad = v.unidades_formato || 0;

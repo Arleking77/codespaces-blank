@@ -1,6 +1,5 @@
-import { createClient } from '@supabase/supabase-client';
+import { createClient } from '@supabase/supabase-js';
 
-// Intenta leer desde el entorno de producción (Vercel) o usa las credenciales fijas como respaldo
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://soowpphfhmniqwahzpc.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_BGSXgbJkkh7OGcHknTfidQ_wYOO45hj';
 
