@@ -6,12 +6,15 @@ import Header from './components/Header';
 import BottomNav from './components/BottomNav';
 
 // Pantallas principales
+import WelcomeScreen from './screens/WelcomeScreen';
 import VentasScreen from './screens/VentasScreen';
 import ProduccionScreen from './screens/ProduccionScreen';
 import PlantelScreen from './screens/PlantelScreen';
 import MetricasScreen from './screens/MetricasScreen';
 
 export default function App() {
+  // Estado para controlar si el cargador de 5 segundos ya terminó
+  const [estaCargado, setEstaCargado] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'ventas' | 'produccion' | 'plantel' | 'metricas'>('metricas');
 
   // Estados globales de catálogos e integridad referencial
@@ -73,7 +76,6 @@ export default function App() {
             conteoAves -= cant;
           } else if (m.movimiento === 'Ajuste') {
             const detalleTexto = m.detalle ? String(m.detalle).toLowerCase() : '';
-            // Verificación estricta de sentido del ajuste para restar bajas o forzar el descuente de 70
             if (
               detalleTexto.includes('baja') || 
               detalleTexto.includes('resta') || 
@@ -153,6 +155,12 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
+  // Si no ha terminado de cargar los 5 segundos, muestra la pantalla de carga
+  if (!estaCargado) {
+    return <WelcomeScreen onFinish={() => setEstaCargado(true)} />;
+  }
+
+  // Una vez cargada, renderiza la app habitual
   return (
     <div className="bg-[#f8f9fa] text-[#191c1d] min-h-screen pb-24 font-sans antialiased">
       <Header />
