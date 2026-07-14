@@ -1,10 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-client';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Intenta leer desde el entorno de producción (Vercel) o usa las credenciales fijas como respaldo
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://soowpphfhmniqwahzpc.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_BGSXgbJkkh7OGcHknTfidQ_wYOO45hj';
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Faltan las credenciales de Supabase en el archivo .env');
+  console.error("Faltan las credenciales de conexión con Supabase.");
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
