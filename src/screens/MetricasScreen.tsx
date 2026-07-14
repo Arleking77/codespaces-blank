@@ -5,6 +5,14 @@ interface MetricasScreenProps {
   promedioVenta: number;
   alimentoHoy: number;
   rankingHuevos: { categoria: string; cantidad: number }[];
+  produccionHoy: {
+    super: number;
+    extra: number;
+    primera: number;
+    segunda: number;
+    merma: number;
+    totalNeto: number;
+  };
   cargarDatos: () => void;
 }
 
@@ -15,10 +23,10 @@ export default function MetricasScreen({
   promedioVenta,
   alimentoHoy,
   rankingHuevos,
+  produccionHoy,
   cargarDatos,
 }: MetricasScreenProps) {
   
-  // Gramos consumidos por ave (Fórmula técnica estándar)
   const gramosPorAve = totalAvesActivas > 0 ? Math.round((alimentoHoy * 1000) / totalAvesActivas) : 0;
 
   return (
@@ -39,7 +47,6 @@ export default function MetricasScreen({
 
       {/* BLOQUE 1: OPERACIONES VIVAS */}
       <div className="grid grid-cols-2 gap-4">
-        {/* Tarjeta Plantel */}
         <div className="bg-white border border-[#c5c5d3] rounded-xl p-4 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 left-0 w-1 h-full bg-[#00236f]"></div>
           <span className="text-xs font-semibold text-gray-500 block mb-1">Plantel Vivo</span>
@@ -47,7 +54,6 @@ export default function MetricasScreen({
           <p className="text-[11px] text-gray-400 mt-1">Aves activas en galpón</p>
         </div>
 
-        {/* Tarjeta Tasa Postura */}
         <div className="bg-white border border-[#c5c5d3] rounded-xl p-4 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 left-0 w-1 h-full bg-[#006c49]"></div>
           <span className="text-xs font-semibold text-gray-500 block mb-1">Tasa de Postura</span>
@@ -56,6 +62,60 @@ export default function MetricasScreen({
             <div className="h-full bg-[#006c49] rounded-full" style={{ width: `${tasaPostura}%` }}></div>
           </div>
         </div>
+      </div>
+
+      {/* NUEVO BLOQUE: RECOLECCIÓN DE HOY DESGLOSADA POR CATEGORÍA */}
+      <div className="bg-white border border-[#c5c5d3] rounded-xl p-4 shadow-sm space-y-3">
+        <div className="flex justify-between items-center border-b pb-2">
+          <h3 className="text-sm font-bold text-[#444651] uppercase tracking-wider flex items-center gap-2">
+            <span className="material-symbols-outlined text-base text-[#00236f]">egg_alt</span>
+            Recolección de Hoy por Categoría
+          </h3>
+          <span className="bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2 py-0.5 rounded-full">
+            Neto: {produccionHoy.totalNeto} ud
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+          {/* Súper */}
+          <div className="bg-amber-50/50 border border-amber-200/60 rounded-lg p-2 text-center">
+            <span className="text-[10px] font-bold text-amber-800 block uppercase tracking-wider">Súper</span>
+            <span className="text-lg font-extrabold text-[#191c1d]">{produccionHoy.super}</span>
+            <span className="text-[9px] text-gray-400 block mt-0.5">huevos</span>
+          </div>
+
+          {/* Extra */}
+          <div className="bg-blue-50/50 border border-blue-200/60 rounded-lg p-2 text-center">
+            <span className="text-[10px] font-bold text-blue-800 block uppercase tracking-wider">Extra</span>
+            <span className="text-lg font-extrabold text-[#191c1d]">{produccionHoy.extra}</span>
+            <span className="text-[9px] text-gray-400 block mt-0.5">huevos</span>
+          </div>
+
+          {/* Primera */}
+          <div className="bg-indigo-50/50 border border-indigo-200/60 rounded-lg p-2 text-center">
+            <span className="text-[10px] font-bold text-indigo-800 block uppercase tracking-wider">Primera</span>
+            <span className="text-lg font-extrabold text-[#191c1d]">{produccionHoy.primera}</span>
+            <span className="text-[9px] text-gray-400 block mt-0.5">huevos</span>
+          </div>
+
+          {/* Segunda */}
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 text-center">
+            <span className="text-[10px] font-bold text-slate-700 block uppercase tracking-wider">Segunda</span>
+            <span className="text-lg font-extrabold text-[#191c1d]">{produccionHoy.segunda}</span>
+            <span className="text-[9px] text-gray-400 block mt-0.5">huevos</span>
+          </div>
+        </div>
+
+        {/* Alerta de Merma */}
+        {produccionHoy.merma > 0 && (
+          <div className="flex justify-between items-center bg-red-50 border border-red-100 rounded-lg px-3 py-1.5 text-xs text-red-700 mt-1">
+            <span className="flex items-center gap-1.5 font-semibold">
+              <span className="material-symbols-outlined text-sm">dangerous</span>
+              Mermas/Rotas registradas hoy:
+            </span>
+            <span className="font-extrabold">{produccionHoy.merma} unidades</span>
+          </div>
+        )}
       </div>
 
       {/* BLOQUE 2: COMERCIAL */}

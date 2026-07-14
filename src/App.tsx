@@ -13,7 +13,6 @@ import PlantelScreen from './screens/PlantelScreen';
 import MetricasScreen from './screens/MetricasScreen';
 
 export default function App() {
-  // Estado para controlar si el cargador de 5 segundos ya terminó
   const [estaCargado, setEstaCargado] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'ventas' | 'produccion' | 'plantel' | 'metricas'>('metricas');
 
@@ -29,6 +28,16 @@ export default function App() {
   const [promedioVenta, setPromedioVenta] = useState<number>(0);
   const [alimentoHoy, setAlimentoHoy] = useState<number>(0);
   const [rankingHuevos, setRankingHuevos] = useState<{ categoria: string; cantidad: number }[]>([]);
+
+  // NUEVO: Estado para almacenar el desglose de huevos recolectados HOY
+  const [produccionHoyCategorias, setProduccionHoyCategorias] = useState({
+    super: 0,
+    extra: 0,
+    primera: 0,
+    segunda: 0,
+    merma: 0,
+    totalNeto: 0
+  });
 
   // Formatos de respaldo automáticos por si la tabla de precios del servidor está vacía
   const formatosRespaldo = [
@@ -97,15 +106,38 @@ export default function App() {
 
       // 3. LOGICA OPERATIVA: Acumulado de recolección y ración de alimento cargado hoy
       const { data: registrosProduccionHoy } = await supabase.from('produccion').select('*').eq('fecha', hoy);
+      
       let huevosHoy = 0;
       let kgAlimentoHoy = 0;
+      let acumuladoSuper = 0;
+      let acumuladoExtra = 0;
+      let acumuladoPrimera = 0;
+      let acumuladoSegunda = 0;
+      let acumuladoMerma = 0;
+
       if (registrosProduccionHoy) {
         registrosProduccionHoy.forEach((p: any) => {
           huevosHoy += p.total_huevos_recolectados || 0;
           kgAlimentoHoy += parseFloat(p.alimento_kg) || 0;
+          acumuladoSuper += p.super || 0;
+          acumuladoExtra += p.extra || 0;
+          acumuladoPrimera += p.primera || 0;
+          acumuladoSegunda += p.segunda || 0;
+          acumuladoMerma += p.merma || 0;
         });
       }
+
       setAlimentoHoy(kgAlimentoHoy);
+      
+      // Guardar el desglose de categorías de hoy
+      setProduccionHoyCategorias({
+        super: acumuladoSuper,
+        extra: acumuladoExtra,
+        primera: acumuladoPrimera,
+        segunda: acumuladoSegunda,
+        merma: acumuladoMerma,
+        totalNeto: huevosHoy
+      });
 
       // Calcular Tasa Postura real en base al inventario vivo definitivo
       if (huevosHoy > 0 && avesFinales > 0) {
@@ -149,18 +181,15 @@ export default function App() {
     }
   };
 
-  // Escucha activa para refrescar los datos cada vez que se navega por la app
   useEffect(() => {
     cargarTodoElSistema();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
-  // Si no ha terminado de cargar los 5 segundos, muestra la pantalla de carga
   if (!estaCargado) {
     return <WelcomeScreen onFinish={() => setEstaCargado(true)} />;
   }
 
-  // Una vez cargada, renderiza la app habitual
   return (
     <div className="bg-[#f8f9fa] text-[#191c1d] min-h-screen pb-24 font-sans antialiased">
       <Header />
@@ -196,6 +225,7 @@ export default function App() {
             promedioVenta={promedioVenta}
             alimentoHoy={alimentoHoy}
             rankingHuevos={rankingHuevos}
+            produccionHoy={produccionHoyCategorias} // ENVIADO NUEVO ESTADO
             cargarDatos={cargarTodoElSistema}
           />
         )}
